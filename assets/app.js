@@ -587,13 +587,13 @@
     reader.onload = () => {
       try {
         const text = String(reader.result);
-        const res = csv.importCsv(text, state.settings, store.uid);
+        const res = csv.importCsv(text.replace(/^\uFEFF/,''), state.settings, store.uid);
         const existing = new Set(state.records.map((r) => r.date + '|' + r.gross));
         const merged = res.records.filter((r) => !existing.has(r.date + '|' + r.gross));
         state.records = state.records.concat(merged);
         persist();
         render();
-        toast(`นำเข้าสำเร็จ ${merged.length} รายการ` + (res.skipped.length ? ` (ข้าม ${res.skipped.length} แถวที่อ่านวันที่ไม่ได้)` : ''), 'ok');
+        toast(`นำเข้าสำเร็จ ${merged.length} รายการ` + (res.skipped && res.skipped.length ? ` (ข้าม ${res.skipped.length} แถวที่อ่านวันที่ไม่ได้)` : ''), 'ok');
       } catch (err) {
         toast('นำเข้าไม่สำเร็จ: ' + err.message, 'err');
       }
