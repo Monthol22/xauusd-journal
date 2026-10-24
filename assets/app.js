@@ -598,7 +598,7 @@
         toast('นำเข้าไม่สำเร็จ: ' + err.message, 'err');
       }
     };
-    reader.readAsText(file, 'utf-8');
+    reader.readAsText(file, 'utf-8-sig');
   }
 
   // ---------------------------------------------------------------- events
