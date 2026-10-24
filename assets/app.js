@@ -13,21 +13,37 @@
     records: [],
     filters: { month: 'all', search: '', nonZero: false, sort: 'desc' },
     editingId: null,
-    mode: 'trade'
+    mode: 'trade',
+    viewMode: 'weekly'
   };
 
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
   // ---------------------------------------------------------------- helpers
-  const nf = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const fmt = (n) => nf.format(Number(n) || 0);
-  const fmtSigned = (n) => (n > 0 ? '+' : '') + fmt(n);
-  const monthKey = (iso) => String(iso || '').slice(0, 7);
-  const monthLabel = (key) => {
-    const [y, m] = key.split('-');
-    return `${m}/${y}`;
-  };
+  function getWeekKey(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    if (isNaN(d.getTime())) return iso;
+    const day = (d.getDay() + 6) % 7; // จันทร์ = 0
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - day);
+    const y = monday.getFullYear();
+    const m = String(monday.getMonth() + 1).padStart(2, '0');
+    const dd = String(monday.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+  }
+
+  function getWeekLabel(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    if (isNaN(d.getTime())) return iso;
+    const day = (d.getDay() + 6) % 7;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - day);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const f = (x) => `${String(x.getDate()).padStart(2, '0')}/${String(x.getMonth() + 1).padStart(2, '0')}`;
+    return `${f(monday)} - ${f(sunday)}/${sunday.getFullYear()}`;
+  }
 
   function toast(msg, kind) {
     const el = document.createElement('div');
@@ -140,10 +156,48 @@
   }
 
   function renderTable() {
+    const vm = state.viewMode || 'weekly';
     const rows = filteredRows();
     const tb = $('#tbody');
     const tf = $('#tfoot');
     $('#empty').hidden = rows.length > 0;
+
+    if (vm === 'weekly') {
+      const groups = new Map();
+      rows.forEach((r) => {
+        const key = getWeekKey(r.date);
+        if (!groups.has(key)) groups.set(key, { key, label: getWeekLabel(r.date), items: [] });
+        groups.get(key).items.push(r);
+      });
+      const sortedKeys = Array.from(groups.keys()).sort((a,b) => state.filters.sort === 'asc' ? a.localeCompare(b) : b.localeCompare(a));
+      tb.innerHTML = sortedKeys.map((key) => {
+        const g = groups.get(key);
+        const sum = calc.summarize(g.items.map((r) => ({ ...r })), state.settings);
+        const netCls = sum.net > 0 ? 'is-profit' : sum.net < 0 ? 'is-loss' : '';
+        return `<tr class="${netCls}">
+          <td class="c-date">สัปดาห์ ${g.label}</td>
+          <td class="num">${fmt(sum.gross)}</td>
+          <td class="num">${fmt(sum.commission)}</td>
+          <td class="num">${fmt(sum.net)}</td>
+          <td class="num">${fmt(sum.usdTotal)}</td>
+          <td class="num">${fmt(sum.dailyThb)}</td>
+          <td class="c-day">${g.items.length} วัน</td>
+          <td class="c-act"></td>
+        </tr>`;
+      }).join('');
+
+      const sumAll = calc.summarize(rows.map((r) => ({ ...r })), state.settings);
+      tf.innerHTML = `<tr>
+        <td class="c-label">Total</td>
+        <td class="num">${fmt(sumAll.gross)}</td>
+        <td class="num">${fmt(sumAll.commission)}</td>
+        <td class="num">${fmt(sumAll.net)}</td>
+        <td class="num">${fmt(sumAll.usdTotal)}</td>
+        <td class="num">${fmt(sumAll.dailyThb)}</td>
+        <td colspan="2"></td>
+      </tr>`;
+      return;
+    }
 
     tb.innerHTML = rows.map((r) => {
       const wd = calc.weekday(r.date);
@@ -618,6 +672,14 @@
       state.filters.nonZero = e.target.checked;
       render();
     });
+    const vmSel = $('#view-mode');
+    if (vmSel) {
+      vmSel.value = state.viewMode;
+      vmSel.addEventListener('change', (e) => {
+        state.viewMode = e.target.value;
+        render();
+      });
+    }
 
     $('#btn-sort').addEventListener('click', () => {
       state.filters.sort = state.filters.sort === 'desc' ? 'asc' : 'desc';

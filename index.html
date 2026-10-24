@@ -117,6 +117,10 @@
       <h2>รายการเทรด</h2>
       <div class="toolbar">
         <select id="filter-month" class="mini" aria-label="กรองตามเดือน"><option value="all">ทุกเดือน</option></select>
+        <select id="view-mode" class="mini" aria-label="มุมมองรายการ">
+          <option value="daily">รายวัน</option>
+          <option value="weekly" selected>รายสัปดาห์</option>
+        </select>
         <input type="search" id="filter-search" class="mini" placeholder="ค้นหาวันที่ / หมายเหตุ" aria-label="ค้นหาวันที่หรือหมายเหตุ" />
         <label class="check"><input type="checkbox" id="filter-nonzero" /> เฉพาะวันที่มียอด</label>
         <button class="btn ghost mini" id="btn-sort" type="button" title="สลับการเรียงวันที่">⇅ ล่าสุดก่อน</button>
@@ -128,13 +132,13 @@
       <table class="grid">
         <thead>
           <tr>
-            <th class="c-date" scope="col">วันที่</th>
+            <th class="c-date" scope="col">สัปดาห์</th>
             <th class="num" scope="col">US$</th>
             <th class="num" scope="col" id="th-commission">−30%</th>
             <th class="num" scope="col">US$ TOTAL</th>
             <th class="num" scope="col">USD TOTAL</th>
-            <th class="num" scope="col">Daily THB</th>
-            <th class="c-day" scope="col">Day</th>
+            <th class="num" scope="col">Total THB</th>
+            <th class="c-day" scope="col">วัน</th>
             <th class="c-act" scope="col"><span class="sr-only">จัดการ</span></th>
           </tr>
         </thead>
