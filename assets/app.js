@@ -586,7 +586,8 @@
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const res = csv.importCsv(String(reader.result), state.settings, store.uid);
+        const text = String(reader.result);
+        const res = csv.importCsv(text, state.settings, store.uid);
         const existing = new Set(state.records.map((r) => r.date + '|' + r.gross));
         const merged = res.records.filter((r) => !existing.has(r.date + '|' + r.gross));
         state.records = state.records.concat(merged);
@@ -651,7 +652,7 @@
     $('#btn-export').addEventListener('click', exportCsv);
     $('#btn-import').addEventListener('click', () => $('#file-input').click());
     $('#file-input').addEventListener('change', (e) => {
-      if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+      if (e.target.files && e.target.files[0]) { handleFile(e.target.files[0]); }
       e.target.value = '';
     });
 
