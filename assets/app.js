@@ -681,7 +681,7 @@
           toast('กู้คืนไม่สำเร็จ: ' + err.message, 'err');
         }
       };
-      reader.readAsText(file, 'utf-8');
+      reader.readAsText(file, 'utf-8-sig');
     });
 
     $('#filter-month').addEventListener('change', (e) => {
