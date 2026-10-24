@@ -1,0 +1,8 @@
+# ไฟล์ที่สร้างจากการ build / ไฟล์ชั่วคราว
+dist/
+xauusd-journal-site.zip
+
+# ไฟล์ระบบ
+.DS_Store
+Thumbs.db
+*.log

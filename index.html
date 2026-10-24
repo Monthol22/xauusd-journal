@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="description" content="บันทึกรายได้จากการเทรด XAUUSD ด้วยสูตรเดียวกับใบบันทึกเดิม: US$ → หักคอมมิชชัน → US$ TOTAL → USD TOTAL → Daily THB พร้อมกราฟและสรุปยอด" />
+<title>บันทึกรายได้เทรด XAUUSD</title>
+<meta name="theme-color" content="#0e1116" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="XAUUSD" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
+<link rel="stylesheet" href="assets/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥇</text></svg>" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">Au</div>
+    <div class="brand-text">
+      <h1>บันทึกรายได้เทรด XAUUSD</h1>
+      <p>คำนวณแบบเดียวกับใบบันทึกเดิม &middot; US$ → −คอมมิชชัน → US$ TOTAL → USD TOTAL → Daily THB</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn ghost" id="btn-settings" type="button">⚙️ ตั้งค่า</button>
+    <button class="btn ghost" id="btn-import" type="button">⬆️ นำเข้า CSV</button>
+    <button class="btn ghost" id="btn-export" type="button">⬇️ ส่งออก CSV</button>
+    <button class="btn primary" id="btn-add" type="button">+ เพิ่มรายการ</button>
+  </div>
+</header>
+
+<!-- ===== ตั้งค่า ===== -->
+<section class="settings-bar" id="settings-bar" hidden>
+  <div class="field">
+    <label for="set-fx">อัตราแลกเปลี่ยน USD → THB</label>
+    <input type="number" id="set-fx" step="0.01" min="0" />
+  </div>
+  <div class="field">
+    <label for="set-commission">ค่าคอมมิชชัน (%)</label>
+    <input type="number" id="set-commission" step="0.1" min="0" />
+  </div>
+  <div class="field">
+    <label for="set-divisor">ตัวหาร (US$ TOTAL ÷ ตัวหาร = USD TOTAL)</label>
+    <input type="number" id="set-divisor" step="1" min="0" />
+  </div>
+  <div class="field">
+    <label for="set-unit">หน่วยของคอลัมน์ US$</label>
+    <select id="set-unit">
+      <option value="cents">เซนต์ (¢) — ตรงกับใบบันทึกเดิม</option>
+      <option value="usd">ดอลลาร์ (USD)</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="set-contract">ขนาดสัญญา XAUUSD (ออนซ์/ล็อต)</label>
+    <input type="number" id="set-contract" step="1" min="0" />
+  </div>
+  <div class="settings-actions">
+    <button class="btn ghost" id="btn-sample" type="button">โหลดข้อมูลตัวอย่าง</button>
+    <button class="btn ghost" id="btn-backup" type="button">💾 สำรองข้อมูล</button>
+    <button class="btn ghost" id="btn-restore" type="button">♻️ กู้คืนข้อมูล</button>
+    <button class="btn danger ghost" id="btn-clear" type="button">ล้างข้อมูลทั้งหมด</button>
+  </div>
+</section>
+
+<main>
+  <!-- ===== สรุป ===== -->
+  <section class="cards" id="cards">
+    <div class="card card-primary">
+      <span class="card-label">Total (THB)</span>
+      <strong class="card-value" id="sum-total-thb">0.00</strong>
+      <span class="card-sub" id="sum-total-usd">—</span>
+    </div>
+    <div class="card">
+      <span class="card-label">Commission (THB)</span>
+      <strong class="card-value" id="sum-commission-thb">0.00</strong>
+      <span class="card-sub" id="sum-commission-usd">—</span>
+    </div>
+    <div class="card">
+      <span class="card-label">US$ TOTAL (สุทธิ)</span>
+      <strong class="card-value" id="sum-net">0.00</strong>
+      <span class="card-sub" id="sum-gross">—</span>
+    </div>
+    <div class="card">
+      <span class="card-label">USD TOTAL</span>
+      <strong class="card-value" id="sum-usd">0.00</strong>
+      <span class="card-sub" id="sum-usd-total">—</span>
+    </div>
+    <div class="card">
+      <span class="card-label">สถิติการเทรด</span>
+      <strong class="card-value" id="sum-days">0</strong>
+      <span class="card-sub" id="sum-winrate">—</span>
+    </div>
+  </section>
+
+  <!-- ===== กราฟ ===== -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>กราฟรายได้รายวัน (Daily THB)</h2>
+      <div class="legend">
+        <span class="dot pos"></span> กำไร
+        <span class="dot neg"></span> ขาดทุน
+        <span class="dot line"></span> ยอดสะสม
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
+  </section>
+
+  <!-- ===== ตาราง ===== -->
+  <section class="panel">
+    <div class="panel-head">
+      <h2>รายการเทรด</h2>
+      <div class="toolbar">
+        <select id="filter-month" class="mini" aria-label="กรองตามเดือน"><option value="all">ทุกเดือน</option></select>
+        <input type="search" id="filter-search" class="mini" placeholder="ค้นหาวันที่ / หมายเหตุ" aria-label="ค้นหาวันที่หรือหมายเหตุ" />
+        <label class="check"><input type="checkbox" id="filter-nonzero" /> เฉพาะวันที่มียอด</label>
+        <button class="btn ghost mini" id="btn-sort" type="button" title="สลับการเรียงวันที่">⇅ ล่าสุดก่อน</button>
+        <button class="btn ghost mini" id="btn-fill-range" type="button">🗓️ เติมวันที่ว่าง</button>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="grid">
+        <thead>
+          <tr>
+            <th class="c-date" scope="col">วันที่</th>
+            <th class="num" scope="col">US$</th>
+            <th class="num" scope="col" id="th-commission">−30%</th>
+            <th class="num" scope="col">US$ TOTAL</th>
+            <th class="num" scope="col">USD TOTAL</th>
+            <th class="num" scope="col">Daily THB</th>
+            <th class="c-day" scope="col">Day</th>
+            <th class="c-act" scope="col"><span class="sr-only">จัดการ</span></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot"></tfoot>
+      </table>
+    </div>
+    <p class="empty" id="empty" hidden>ยังไม่มีข้อมูล — กด “+ เพิ่มรายการ” เพื่อเริ่มบันทึก</p>
+  </section>
+
+  <p class="footnote">
+    สูตร: <b>US$</b> (กำไรขั้นต้น) → <b>−คอมมิชชัน</b> = US$ × อัตราคอมมิชชัน → <b>US$ TOTAL</b> = US$ − คอมมิชชัน →
+    <b>USD TOTAL</b> = US$ TOTAL ÷ ตัวหาร (100) → <b>Daily THB</b> = USD TOTAL × อัตราแลกเปลี่ยน (33.00)
+  </p>
+</main>
+
+<!-- ===== Modal เพิ่ม/แก้ไข ===== -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <header class="modal-head">
+      <h3 id="modal-title">เพิ่มรายการเทรด</h3>
+      <button class="icon-btn" type="button" data-close aria-label="ปิด">✕</button>
+    </header>
+
+    <div class="modal-body">
+      <div class="grid-form">
+        <div class="field">
+          <label for="f-date">วันที่</label>
+          <input type="date" id="f-date" />
+        </div>
+        <div class="field">
+          <label for="f-commission">ค่าคอมมิชชัน (%)</label>
+          <input type="number" id="f-commission" step="0.1" min="0" />
+          <small id="f-commission-hint"></small>
+        </div>
+      </div>
+
+      <div class="mode-switch" role="tablist">
+        <button type="button" class="mode-btn active" data-mode="trade">จากราคาเข้า/ออก &amp; ล็อต</button>
+        <button type="button" class="mode-btn" data-mode="manual">กรอกกำไรเอง</button>
+      </div>
+
+      <!-- โหมดคำนวณจากราคา -->
+      <div class="mode-panel" id="panel-trade">
+        <div class="grid-form three">
+          <div class="field">
+            <label for="f-direction">ทิศทาง</label>
+            <select id="f-direction">
+              <option value="buy">Buy (ขายขึ้น)</option>
+              <option value="sell">Sell (ขายลง)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-entry">ราคาเข้า</label>
+            <input type="number" id="f-entry" step="0.01" placeholder="2650.00" />
+          </div>
+          <div class="field">
+            <label for="f-exit">ราคาออก</label>
+            <input type="number" id="f-exit" step="0.01" placeholder="2652.00" />
+          </div>
+          <div class="field">
+            <label for="f-lots">จำนวนล็อต</label>
+            <input type="number" id="f-lots" step="0.01" placeholder="0.10" />
+          </div>
+        </div>
+        <p class="hint" id="pnl-hint">P/L = (ราคาออก − ราคาเข้า) × จำนวนล็อต × ขนาดสัญญา</p>
+      </div>
+
+      <!-- โหมดกรอกเอง -->
+      <div class="mode-panel" id="panel-manual" hidden>
+        <div class="grid-form">
+          <div class="field">
+            <label for="f-gross" id="f-gross-label">กำไร/ขาดทุน (US$)</label>
+            <input type="number" id="f-gross" step="0.01" placeholder="18352.00" />
+            <small id="f-gross-hint"></small>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="f-notes">หมายเหตุ</label>
+        <input type="text" id="f-notes" placeholder="เช่น เทรดแยนสวิง XAUUSD" />
+      </div>
+
+      <div class="preview">
+        <div class="preview-title">ตัวอย่างผลการคำนวณ</div>
+        <div class="preview-grid">
+          <div><span>US$</span><b id="pv-gross">0.00</b></div>
+          <div><span id="pv-commission-label">−30%</span><b id="pv-commission">0.00</b></div>
+          <div><span>US$ TOTAL</span><b id="pv-net">0.00</b></div>
+          <div><span>USD TOTAL</span><b id="pv-usd">0.00</b></div>
+          <div class="hl"><span>Daily THB</span><b id="pv-thb">0.00</b></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="modal-foot">
+      <button class="btn danger ghost" id="btn-delete" type="button" hidden>ลบรายการ</button>
+      <span class="spacer"></span>
+      <button class="btn ghost" type="button" data-close>ยกเลิก</button>
+      <button class="btn primary" id="btn-save" type="button">บันทึก</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ===== Modal เติมวันที่ว่าง ===== -->
+<div class="modal" id="modal-range" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-card small" role="dialog" aria-modal="true">
+    <header class="modal-head">
+      <h3>เติมวันที่ว่าง (สร้างแถวให้อัตโนมัติ)</h3>
+      <button class="icon-btn" type="button" data-close aria-label="ปิด">✕</button>
+    </header>
+    <div class="modal-body">
+      <div class="grid-form">
+        <div class="field">
+          <label for="r-from">ตั้งแต่วันที่</label>
+          <input type="date" id="r-from" />
+        </div>
+        <div class="field">
+          <label for="r-to">ถึงวันที่</label>
+          <input type="date" id="r-to" />
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="r-skip-weekend" checked /> ข้ามวันเสาร์–อาทิตย์</label>
+      <p class="hint">ระบบจะสร้างรายการยอด 0 สำหรับวันที่ยังไม่มีข้อมูล เพื่อให้ตารางครบถ้วนเหมือนใบบันทึกเดิม</p>
+    </div>
+    <footer class="modal-foot">
+      <span class="spacer"></span>
+      <button class="btn ghost" type="button" data-close>ยกเลิก</button>
+      <button class="btn primary" id="btn-range-save" type="button">สร้างรายการ</button>
+    </footer>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept=".csv,text/csv" hidden />
+<input type="file" id="file-restore" accept=".json,application/json" hidden />
+<div class="toast-wrap" id="toasts"></div>
+
+<script src="assets/calc.js"></script>
+<script src="assets/sample-data.js"></script>
+<script src="assets/store.js"></script>
+<script src="assets/csv.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

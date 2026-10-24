@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ตัวอย่างกราฟ XAUUSD Journal</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0e1116;
+      color: #e6edf3;
+      margin: 0;
+      padding: 24px;
+      line-height: 1.6;
+    }
+    header { margin-bottom: 24px; }
+    header h1 { margin: 0 0 8px; font-size: 22px; }
+    header p { margin: 0; color: #8b98a8; font-size: 14px; }
+    .panel {
+      background: #151b23;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 1100px;
+    }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 18px;
+      border-bottom: 1px solid #2d3748;
+      flex-wrap: wrap;
+    }
+    .panel-head h2 { margin: 0; font-size: 16px; }
+    .legend { display: flex; gap: 12px; font-size: 12px; color: #8b98a8; }
+    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .dot.pos { background: rgba(53,201,138,.78); }
+    .dot.neg { background: rgba(242,84,91,.78); }
+    .dot.line { background: #f0b429; }
+    .chart-wrap { padding: 12px 14px 8px; }
+    canvas { width: 100%; height: 320px; display: block; }
+    .note { margin-top: 20px; padding: 14px 18px; background: #151b23; border: 1px solid #2d3748; border-radius: 12px; color: #8b98a8; font-size: 13px; max-width: 1100px; }
+    .note strong { color: #e6edf3; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ตัวอย่างกราฟ XAUUSD Journal</h1>
+    <p>แท่งรายวัน + เส้นยอดสะสม · ตัวเลขแนวดิ่งบนแท่งและบนจุด · ข้อมูลตัวอย่าง 15 ก.ย. – 5 ต.ค. 2026</p>
+  </header>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>แท่งรายวัน + เส้นยอดสะสม</h2>
+      <div class="legend">
+        <span><span class="dot pos"></span>กำไร</span>
+        <span><span class="dot neg"></span>ขาดทุน</span>
+        <span><span class="dot line"></span>ยอดสะสม</span>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
+  </section>
+
+  <div class="note">
+    <strong>หมายเหตุ:</strong> ตัวเลขสีขาว = รายได้รายวัน (อยู่เหนือแท่ง) · ตัวเลขสีเหลือง = ยอดสะสม (อยู่เหนือจุดบนเส้น) ·
+    ทั้งสองอ่านแนวตั้งจากล่างขึ้นบน
+  </div>
+
+  <script src="assets/calc.js"></script>
+  <script>
+    const calc = window.XAU.calc;
+    const nf = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const fmt = (n) => nf.format(Math.round(n));
+
+    const sample = [
+      ['2026-09-15',122.00],['2026-09-16',18352.00],['2026-09-17',10356.00],
+      ['2026-09-18',7095.00],['2026-09-19',0],['2026-09-20',0],
+      ['2026-09-21',4218.00],['2026-09-22',4375.00],['2026-09-23',3877.00],
+      ['2026-09-24',4131.00],['2026-09-25',3050.00],['2026-09-26',0],
+      ['2026-09-27',0],['2026-09-28',65251.00],['2026-09-29',6981.00],
+      ['2026-09-30',6651.00],['2026-10-01',15785.00],['2026-10-02',26682.00],
+      ['2026-10-03',0],['2026-10-04',0],['2026-10-05',9494.00]
+    ];
+    const rows = calc.computeAll(sample.map(r => ({ date: r[0], gross: r[1] })), calc.DEFAULTS);
+
+    function render(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+
+      const padL = 68, padR = 18, padT = 48, padB = 30;
+      const innerW = w - padL - padR;
+      const innerH = h - padT - padB;
+
+      const daily = rows.map(r => r.dailyThb);
+      let cum = 0;
+      const cumSeries = daily.map(v => (cum += v));
+
+      const maxV = Math.max(0, ...daily, ...cumSeries);
+      const minV = Math.min(0, ...daily, ...cumSeries);
+      const span = (maxV - minV) || 1;
+      const yOf = v => padT + innerH - ((v - minV) / span) * innerH;
+
+      // grid
+      ctx.strokeStyle = 'rgba(255,255,255,.06)';
+      ctx.fillStyle = '#8b98a8';
+      ctx.font = '10px "SF Mono", Menlo, monospace';
+      ctx.textAlign = 'right';
+      for (let i = 0; i <= 4; i++) {
+        const v = minV + (span * i) / 4;
+        const y = yOf(v);
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(w - padR, y);
+        ctx.stroke();
+        ctx.fillText(fmt(v), padL - 8, y + 3.5);
+      }
+
+      const n = rows.length;
+      const slot = innerW / n;
+      const barW = Math.max(6, Math.min(28, slot * 0.5));
+
+      // bars
+      rows.forEach((r, i) => {
+        const x = padL + slot * i + (slot - barW) / 2;
+        const y0 = yOf(0);
+        const y1 = yOf(r.dailyThb);
+        ctx.fillStyle = r.dailyThb >= 0 ? 'rgba(53,201,138,.78)' : 'rgba(242,84,91,.78)';
+        ctx.fillRect(x, Math.min(y0, y1), barW, Math.max(2, Math.abs(y1 - y0)));
+      });
+
+      const LABEL_FONT = '9px "SF Mono", Menlo, monospace';
+      function vLabel(text, cx, anchorY, color) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = LABEL_FONT;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.translate(cx, anchorY);
+        ctx.rotate(-Math.PI / 2);
+        ctx.fillText(text, 0, 0);
+        ctx.restore();
+      }
+      function labelWidth(text) {
+        ctx.save();
+        ctx.font = LABEL_FONT;
+        const wpx = ctx.measureText(text).width;
+        ctx.restore();
+        return wpx;
+      }
+
+      // ตัวเลขรายได้ เหนือแท่ง (เยื้องซ้าย)
+      if (slot >= 16) {
+        const lane = Math.min(10, slot * 0.28);
+        rows.forEach((r, i) => {
+          if (Math.abs(r.dailyThb) < 1) return;
+          const cx = padL + slot * i + slot / 2 - lane;
+          const text = fmt(r.dailyThb);
+          const tw = labelWidth(text);
+          const y0 = yOf(0), y1 = yOf(r.dailyThb);
+          const anchorY = r.dailyThb >= 0 ? Math.min(y0, y1) - 5 : Math.max(y0, y1) + 5 + tw;
+          vLabel(text, cx, anchorY, '#c9d1d9');
+        });
+      }
+
+      // cumulative line
+      ctx.strokeStyle = '#f0b429';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      cumSeries.forEach((v, i) => {
+        const x = padL + slot * i + slot / 2;
+        const y = yOf(v);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      cumSeries.forEach((v, i) => {
+        const x = padL + slot * i + slot / 2;
+        const y = yOf(v);
+        ctx.fillStyle = '#f0b429';
+        ctx.beginPath();
+        ctx.arc(x, y, 2.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // ตัวเลขยอดสะสม เหนือจุด (เยื้องขวา)
+      if (slot >= 16) {
+        const lane = Math.min(10, slot * 0.28);
+        cumSeries.forEach((v, i) => {
+          if (Math.abs(v) < 1) return;
+          const cx = padL + slot * i + slot / 2 + lane;
+          vLabel(fmt(v), cx, yOf(v) - 5, '#f7c95b');
+        });
+      }
+
+      // x labels
+      ctx.fillStyle = '#8b98a8';
+      ctx.font = '10px "SF Mono", Menlo, monospace';
+      ctx.textAlign = 'center';
+      const step = Math.max(1, Math.ceil(n / 12));
+      rows.forEach((r, i) => {
+        if (i % step !== 0 && i !== n - 1) return;
+        ctx.fillText(calc.formatDate(r.date).slice(0, 5), padL + slot * i + slot / 2, h - 10);
+      });
+    }
+
+    const canvas = document.getElementById('chart');
+    render(canvas);
+    window.addEventListener('resize', () => render(canvas));
+  </script>
+</body>
+</html>

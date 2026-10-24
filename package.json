@@ -1,0 +1,11 @@
+{
+  "name": "xauusd-income-journal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "แอปบันทึกรายได้จากการเทรด XAUUSD (สูตรเดียวกับใบบันทึกเดิม)",
+  "scripts": {
+    "test": "node tests/calc.test.mjs",
+    "serve": "python3 tools/dev-server.py 5173",
+    "build": "python3 tools/build.py"
+  }
+}
