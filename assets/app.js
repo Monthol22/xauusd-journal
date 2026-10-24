@@ -779,6 +779,37 @@
 
     // ปุ่มโหลดข้อมูลตัวอย่างจะแสดงเฉพาะเมื่อมีไฟล์ sample-data.js (เวอร์ชันออนไลน์ไม่มี)
     $('#btn-sample').hidden = store.sampleRecords().length === 0;
+
+    // Force bind สำคัญ
+    const btnAdd = document.getElementById('btn-add');
+    if (btnAdd) {
+      btnAdd.onclick = null;
+      btnAdd.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openEntry(null);
+      }, true);
+    }
+    const btnImport = document.getElementById('btn-import');
+    if (btnImport) {
+      btnImport.onclick = null;
+      btnImport.addEventListener('click', function(e) {
+        e.preventDefault();
+        document.getElementById('file-input').click();
+      }, true);
+    }
+    const btnFill = document.getElementById('btn-fill-range');
+    if (btnFill) {
+      btnFill.onclick = null;
+      btnFill.addEventListener('click', function(e) {
+        e.preventDefault();
+        const today = new Date();
+        const first = new Date(today.getFullYear(), today.getMonth(), 1);
+        document.getElementById('r-from').value = first.getFullYear() + '-' + String(first.getMonth()+1).padStart(2,'0') + '-01';
+        document.getElementById('r-to').value = today.toISOString().slice(0,10);
+        openModal('#modal-range');
+      }, true);
+    }
   }
 
   /** ลงทะเบียน service worker เพื่อให้เปิดแอปได้ตอนออฟไลน์ (เฉพาะเมื่อเปิดผ่าน http/https) */
