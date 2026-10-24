@@ -90,7 +90,7 @@
     const q = f.search.trim().toLowerCase();
     const rows = computedRows().filter((r) => {
       if (f.month !== 'all' && monthKey(r.date) !== f.month) return false;
-      if (f.nonZero && !r.gross) return false;
+      if (f.nonZero && !(r.gross && Number(r.gross) !== 0)) return false;
       if (q) {
         const hay = `${calc.formatDate(r.date)} ${r.date} ${r.notes || ''} ${r.direction || ''}`.toLowerCase();
         if (hay.indexOf(q) === -1) return false;
@@ -101,7 +101,7 @@
   }
 
   // ---------------------------------------------------------------- render
-  function render() {
+  function render() { console.log('render called');
     renderSettings();
     renderSortButton();
     renderMonths();
@@ -159,7 +159,7 @@
     $('#sum-winrate').textContent = 'ชนะ ' + sum.wins + ' / แพ้ ' + sum.losses + ' · Win rate ' + sum.winRate + '%';
   }
 
-  function renderTable() {
+  function renderTable() { console.log('renderTable called');
     const vm = state.viewMode || 'weekly';
     const rows = filteredRows();
     const tb = $('#tbody');
