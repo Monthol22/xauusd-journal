@@ -520,24 +520,43 @@
 
   // ---------------------------------------------------------------- range fill
   function fillRange(from, to, skipWeekend) {
-    const existing = new Set(state.records.map((r) => r.date));
-    let added = 0;
-    const start = new Date(from + 'T00:00:00');
-    const end = new Date(to + 'T00:00:00');
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const wd = d.getDay();
-      if (skipWeekend && (wd === 0 || wd === 6)) continue;
-      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      if (existing.has(iso)) continue;
-      state.records.push({
-        id: store.uid(), date: iso, direction: null, entry: null, exit: null, lots: null,
-        gross: 0, commissionRate: null, notes: ''
-      });
-      added++;
+    try {
+      const existing = new Set(state.records.map((r) => r.date));
+      let added = 0;
+      const start = new Date(from + 'T00:00:00');
+      const end = new Date(to + 'T00:00:00');
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        toast('วันที่ไม่ถูกต้อง', 'err');
+        return 0;
+      }
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const wd = d.getDay();
+        if (skipWeekend && (wd === 0 || wd === 6)) continue;
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (existing.has(iso)) continue;
+        state.records.push({
+          id: store.uid(),
+          date: iso,
+          direction: null,
+          entry: null,
+          exit: null,
+          lots: null,
+          gross: 0,
+          commissionRate: null,
+          notes: '',
+          mode: null
+        });
+        added++;
+      }
+      persist();
+      render();
+      toast(added ? `เพิ่ม ${added} วันที่` : 'ไม่มีวันที่ใหม่ที่ต้องเพิ่ม', added ? 'ok' : '');
+      return added;
+    } catch (err) {
+      console.error('fillRange error', err);
+      toast('เกิดข้อผิดพลาดในการเติมวันที่ว่าง', 'err');
+      return 0;
     }
-    persist();
-    render();
-    toast(added ? `เพิ่ม ${added} วันที่` : 'ไม่มีวันที่ใหม่ที่ต้องเพิ่ม', added ? 'ok' : '');
   }
 
   // ---------------------------------------------------------------- import/export
@@ -734,8 +753,11 @@
       const to = $('#r-to').value;
       if (!from || !to) { toast('กรุณาเลือกช่วงวันที่', 'err'); return; }
       if (from > to) { toast('วันที่เริ่มต้องน้อยกว่าวันที่สิ้นสุด', 'err'); return; }
-      fillRange(from, to, $('#r-skip-weekend').checked);
-      closeModal('#modal-range');
+      try {
+        fillRange(from, to, $('#r-skip-weekend').checked);
+      } finally {
+        closeModal('#modal-range');
+      }
     });
 
     let resizeTimer;
