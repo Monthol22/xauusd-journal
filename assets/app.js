@@ -21,6 +21,15 @@
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
   // ---------------------------------------------------------------- helpers
+  const nf = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (n) => nf.format(Number(n) || 0);
+  const fmtSigned = (n) => (n > 0 ? '+' : '') + fmt(n);
+  const monthKey = (iso) => String(iso || '').slice(0, 7);
+  const monthLabel = (key) => {
+    const [y, m] = String(key).split('-');
+    return m && y ? m + '/' + y : key;
+  };
+
   function getWeekKey(iso) {
     const d = new Date(iso + 'T00:00:00');
     if (isNaN(d.getTime())) return iso;
@@ -586,13 +595,15 @@
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const text = String(reader.result);
-        const res = csv.importCsv(text.replace(/^\uFEFF/,''), state.settings, store.uid);
+        const text = String(reader.result || '');
+        const clean = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+        const s = state.settings || (window.XAU && window.XAU.calc ? window.XAU.calc.DEFAULTS : {fxRate:33, commissionRate:30, divisor:100, unit:'cents', contractSize:100});
+        const res = csv.importCsv(clean, s, (typeof store.uid === 'function' ? store.uid : function(){ return 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }));
         const existing = new Set(state.records.map((r) => r.date + '|' + r.gross));
         const merged = res.records.filter((r) => !existing.has(r.date + '|' + r.gross));
         state.records = state.records.concat(merged);
-        persist();
-        render();
+        if (typeof persist === 'function') persist();
+        if (typeof render === 'function') render();
         toast(`นำเข้าสำเร็จ ${merged.length} รายการ` + (res.skipped && res.skipped.length ? ` (ข้าม ${res.skipped.length} แถวที่อ่านวันที่ไม่ได้)` : ''), 'ok');
       } catch (err) {
         toast('นำเข้าไม่สำเร็จ: ' + err.message, 'err');
