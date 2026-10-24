@@ -58,12 +58,16 @@
   }
 
   function openModal(id) {
-    const m = $(id);
+    const m = typeof id === 'string' ? document.querySelector(id) : id;
+    if (!m) return;
+    m.removeAttribute('hidden');
     m.hidden = false;
     document.body.style.overflow = 'hidden';
   }
   function closeModal(id) {
-    const m = $(id);
+    const m = typeof id === 'string' ? document.querySelector(id) : id;
+    if (!m) return;
+    m.setAttribute('hidden', '');
     m.hidden = true;
     document.body.style.overflow = '';
   }
@@ -781,13 +785,22 @@
     $('#btn-sample').hidden = store.sampleRecords().length === 0;
 
     // Force bind สำคัญ
-    const btnAdd = document.getElementById('btn-add');
+  const btnAdd = document.getElementById('btn-add');
     if (btnAdd) {
-      btnAdd.onclick = null;
+      btnAdd.removeAttribute('disabled');
+      btnAdd.onclick = function(e) {
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        const m = document.getElementById('modal');
+        if (m) { m.hidden = false; m.removeAttribute('hidden'); document.body.style.overflow='hidden'; }
+        // also call openEntry
+        try { openEntry(null); } catch(ex) {}
+      };
       btnAdd.addEventListener('click', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        openEntry(null);
+        const m = document.getElementById('modal');
+        if (m) { m.hidden = false; m.removeAttribute('hidden'); document.body.style.overflow='hidden'; }
+        try { openEntry(null); } catch(ex) {}
       }, true);
     }
     const btnImport = document.getElementById('btn-import');
