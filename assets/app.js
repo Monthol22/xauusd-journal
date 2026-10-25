@@ -14,7 +14,8 @@
     filters: { month: 'all', search: '', nonZero: false, sort: 'desc', dateFrom: '', dateTo: '' },
     editingId: null,
     mode: 'trade',
-    viewMode: 'weekly'
+    viewMode: 'weekly',
+    profile: 'Default'
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -83,7 +84,7 @@
 
   // ---------------------------------------------------------------- state
   function persist() {
-    store.save({ settings: state.settings, records: state.records });
+    store.save({ settings: state.settings, records: state.records }, state.profile);
   }
 
   function computedRows() {
@@ -615,7 +616,53 @@
   }
 
   // ---------------------------------------------------------------- events
+  function renderProfiles() {
+    const sel = document.getElementById('profile-select');
+    if (!sel) return;
+    const list = store.getProfiles();
+    sel.innerHTML = list.map((p) => `<option value="${p.replace(/"/g, '&quot;')}">${p.replace(/</g, '&lt;')}</option>`).join('');
+    sel.value = state.profile;
+  }
+
   function bind() {
+    const profSel = document.getElementById('profile-select');
+    if (profSel) {
+      profSel.addEventListener('change', () => {
+        const name = profSel.value;
+        state.profile = name;
+        store.setCurrentProfile(name);
+        const loaded = store.load(name);
+        state.settings = calc.normalizeSettings(loaded.settings);
+        state.records = loaded.records;
+        render();
+        toast('เปลี่ยนโปรไฟล์เป็น ' + name, 'ok');
+      });
+    }
+    const profAdd = document.getElementById('btn-profile-add');
+    if (profAdd) {
+      profAdd.addEventListener('click', () => {
+        const name = prompt('ชื่อโปรไฟล์ใหม่');
+        if (!name) return;
+        const n = name.trim();
+        if (!n) return;
+        const list = store.getProfiles();
+        if (list.includes(n)) {
+          toast('มีโปรไฟล์นี้อยู่แล้ว', 'err');
+          return;
+        }
+        list.push(n);
+        store.saveProfiles(list);
+        state.profile = n;
+        store.setCurrentProfile(n);
+        const loaded = store.load(n);
+        state.settings = calc.normalizeSettings(loaded.settings);
+        state.records = loaded.records;
+        renderProfiles();
+        profSel.value = n;
+        render();
+        toast('สร้างโปรไฟล์ ' + n + ' แล้ว', 'ok');
+      });
+    }
     $('#btn-add').addEventListener('click', () => openEntry(null));
     $('#btn-settings').addEventListener('click', () => {
       const bar = $('#settings-bar');
@@ -820,10 +867,12 @@
 
   // ---------------------------------------------------------------- init
   function init() {
-    const loaded = store.load();
+    state.profile = store.getCurrentProfile ? store.getCurrentProfile() : 'Default';
+    const loaded = store.load(state.profile);
     state.settings = calc.normalizeSettings(loaded.settings);
     state.records = loaded.records;
     bind();
+    renderProfiles();
     render();
     updateGrossLabel();
     registerServiceWorker();

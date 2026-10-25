@@ -11,10 +11,66 @@
 })(typeof self !== 'undefined' ? self : globalThis, function (calc) {
   'use strict';
 
-  const KEY = 'xauusd-income-journal-v1';
+  const BASE_KEY = 'xauusd-income-journal-v1';
+  const KEY_OLD = 'xauusd-income-journal-v1';
+  const PROFILE_LIST_KEY = 'xauusd-journal-profiles';
+  const PROFILE_CURRENT_KEY = 'xauusd-journal-profile-current';
 
   function uid() {
     return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function getProfiles() {
+    try {
+      const raw = localStorage.getItem(PROFILE_LIST_KEY);
+      if (!raw) return ['Default'];
+      const list = JSON.parse(raw);
+      if (Array.isArray(list) && list.length) return list;
+      return ['Default'];
+    } catch (e) {
+      return ['Default'];
+    }
+  }
+
+  function saveProfiles(list) {
+    try {
+      localStorage.setItem(PROFILE_LIST_KEY, JSON.stringify(list));
+    } catch (e) {}
+  }
+
+  function getCurrentProfile() {
+    try {
+      const p = localStorage.getItem(PROFILE_CURRENT_KEY);
+      if (p) return p;
+      const list = getProfiles();
+      const cur = list[0] || 'Default';
+      localStorage.setItem(PROFILE_CURRENT_KEY, cur);
+      return cur;
+    } catch (e) {
+      return 'Default';
+    }
+  }
+
+  function setCurrentProfile(name) {
+    try {
+      localStorage.setItem(PROFILE_CURRENT_KEY, name);
+    } catch (e) {}
+  }
+
+  function keyFor(profile) {
+    const p = profile || getCurrentProfile();
+    // keep legacy key for default to be safe
+    if (p === 'Default') {
+      // check if new keyed exists, else use legacy
+      try {
+        if (localStorage.getItem(BASE_KEY + ':' + p)) return BASE_KEY + ':' + p;
+        // prefer legacy for backward compat
+        return KEY_OLD;
+      } catch (e) {
+        return KEY_OLD;
+      }
+    }
+    return BASE_KEY + ':' + p;
   }
 
   function defaultState() {
@@ -41,13 +97,25 @@
     }));
   }
 
-  function load() {
+  function load(profile) {
     try {
-      const raw = localStorage.getItem(KEY);
+      const p = profile || getCurrentProfile();
+      const k = keyFor(p);
+      let raw = localStorage.getItem(k);
+      // migrate: if default and no new key but old key exists
+      if (!raw && p === 'Default') {
+        raw = localStorage.getItem(KEY_OLD);
+        if (raw) {
+          try { localStorage.setItem(BASE_KEY + ':Default', raw); } catch (e) {}
+        }
+      }
       if (!raw) {
         const fresh = defaultState();
-        fresh.records = sampleRecords();
-        save(fresh);
+        // only add sample for first default profile
+        if (p === 'Default') {
+          fresh.records = sampleRecords();
+        }
+        save(fresh, p);
         return fresh;
       }
       const parsed = JSON.parse(raw);
@@ -58,14 +126,15 @@
     } catch (err) {
       console.warn('โหลดข้อมูลไม่สำเร็จ ใช้ค่าเริ่มต้นแทน', err);
       const fresh = defaultState();
-      fresh.records = sampleRecords();
       return fresh;
     }
   }
 
-  function save(state) {
+  function save(state, profile) {
     try {
-      localStorage.setItem(KEY, JSON.stringify({
+      const p = profile || getCurrentProfile();
+      const k = keyFor(p);
+      localStorage.setItem(k, JSON.stringify({
         settings: state.settings,
         records: state.records
       }));
@@ -128,10 +197,17 @@
   }
 
   return {
-    KEY,
+    KEY: BASE_KEY,
+    KEY_OLD,
+    BASE_KEY,
     uid,
     defaultState,
     sampleRecords,
+    getProfiles,
+    saveProfiles,
+    getCurrentProfile,
+    setCurrentProfile,
+    keyFor,
     load,
     save,
     sortRecords,
