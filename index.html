@@ -121,9 +121,14 @@
           <option value="daily">รายวัน</option>
           <option value="weekly" selected>รายสัปดาห์</option>
         </select>
-        <input type="search" id="filter-search" class="mini" placeholder="ค้นหาวันที่ / หมายเหตุ" aria-label="ค้นหาวันที่หรือหมายเหตุ" />
+        <label class="mini-label">จากวันที่</label>
+        <input type="date" id="filter-date-from" class="mini" aria-label="จากวันที่" />
+        <label class="mini-label">ถึงวันที่</label>
+        <input type="date" id="filter-date-to" class="mini" aria-label="ถึงวันที่" />
+        <input type="search" id="filter-search" class="mini" placeholder="ค้นหาหมายเหตุ" aria-label="ค้นหาหมายเหตุ" />
         <label class="check"><input type="checkbox" id="filter-nonzero" /> เฉพาะวันที่มียอด</label>
         <button class="btn ghost mini" id="btn-sort" type="button" title="สลับการเรียงวันที่">⇅ ล่าสุดก่อน</button>
+        <button class="btn ghost mini" id="btn-filter-clear" type="button" title="ล้างตัวกรอง">ล้างตัวกรอง</button>
         <button class="btn ghost mini" id="btn-fill-range" type="button">🗓️ เติมวันที่ว่าง</button>
       </div>
     </div>

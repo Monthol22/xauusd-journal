@@ -11,7 +11,7 @@
   const state = {
     settings: null,
     records: [],
-    filters: { month: 'all', search: '', nonZero: false, sort: 'desc' },
+    filters: { month: 'all', search: '', nonZero: false, sort: 'desc', dateFrom: '', dateTo: '' },
     editingId: null,
     mode: 'trade',
     viewMode: 'weekly'
@@ -100,8 +100,10 @@
     const rows = computedRows().filter((r) => {
       if (f.month !== 'all' && monthKey(r.date) !== f.month) return false;
       if (f.nonZero && !(r.gross && Number(r.gross) !== 0)) return false;
+      if (f.dateFrom && r.date < f.dateFrom) return false;
+      if (f.dateTo && r.date > f.dateTo) return false;
       if (q) {
-        const hay = `${calc.formatDate(r.date)} ${r.date} ${r.notes || ''} ${r.direction || ''}`.toLowerCase();
+        const hay = `${r.notes || ''} ${r.direction || ''}`.toLowerCase();
         if (hay.indexOf(q) === -1) return false;
       }
       return true;
@@ -699,6 +701,20 @@
       state.filters.month = e.target.value;
       render();
     });
+    const fFrom = document.getElementById('filter-date-from');
+    const fTo = document.getElementById('filter-date-to');
+    if (fFrom) {
+      fFrom.addEventListener('change', (e) => {
+        state.filters.dateFrom = e.target.value || '';
+        render();
+      });
+    }
+    if (fTo) {
+      fTo.addEventListener('change', (e) => {
+        state.filters.dateTo = e.target.value || '';
+        render();
+      });
+    }
     $('#filter-search').addEventListener('input', (e) => {
       state.filters.search = e.target.value;
       render();
@@ -707,6 +723,25 @@
       state.filters.nonZero = e.target.checked;
       render();
     });
+    const btnClear = document.getElementById('btn-filter-clear');
+    if (btnClear) {
+      btnClear.addEventListener('click', () => {
+        state.filters.month = 'all';
+        state.filters.search = '';
+        state.filters.nonZero = false;
+        state.filters.dateFrom = '';
+        state.filters.dateTo = '';
+        const fm = document.getElementById('filter-month');
+        if (fm) fm.value = 'all';
+        const fs = document.getElementById('filter-search');
+        if (fs) fs.value = '';
+        const fnz = document.getElementById('filter-nonzero');
+        if (fnz) fnz.checked = false;
+        if (fFrom) fFrom.value = '';
+        if (fTo) fTo.value = '';
+        render();
+      });
+    }
     const vmSel = $('#view-mode');
     if (vmSel) {
       vmSel.value = state.viewMode;
